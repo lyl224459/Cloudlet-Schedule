@@ -92,14 +92,8 @@ logs/
 results/
 results.zip
 
-# 绘图输出（排除图片、特定文件和文档）
-draw/*.png
-draw/*.jpg
-draw/*.jpeg
-draw/*.gif
-draw/*.md
-draw/drawpicture.py
-draw/result_visualization.ipynb
+# 绘图输出
+draw/
 
 # 其他
 *.bak
