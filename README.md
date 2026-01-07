@@ -21,7 +21,6 @@
 - ✅ **灵活的实验框架**：支持批量运行、多次试验、自动统计分析
 - ✅ **异构虚拟机环境**：模拟低、中、高三种性能等级的虚拟机
 - ✅ **详细的性能指标**：包括 Makespan、Cost、Load Balance、Resource Utilization、TotalTime 等
-- ✅ **可视化支持**：提供 Python 绘图脚本用于结果分析
 
 ## 🏗️ 项目结构
 
@@ -74,17 +73,6 @@ Cloudlet-Scheduler-mydev/
 │   │   └── mutations.java     # 变异策略
 │   ├── Main.java              # 单次仿真入口
 │   └── mmain.java             # 备用主入口
-├── draw/                      # 可视化绘图脚本和文档
-│   ├── drawpicture.py         # Python 结果绘图脚本
-│   ├── doaw.ipynb             # Jupyter 绘图笔记本
-│   ├── result_visualization.ipynb  # 结果可视化笔记本
-│   ├── pareto_front_visualization.ipynb  # Pareto前沿可视化
-│   ├── multi_algorithm_comparison.ipynb   # 多算法对比分析
-│   ├── moppo_improvements_analysis.ipynb # MO-PPO改进分析
-│   ├── BatchRunner使用说明.md           # BatchRunner使用文档
-│   ├── MO-PPO改进算法分析说明.md        # MO-PPO算法说明
-│   ├── 经典多目标算法说明.md            # NSGA-II、MOEA/D、SPEA2说明
-│   └── Pareto前沿可视化使用说明.md      # Pareto前沿可视化指南
 ├── libs/                      # 第三方库（JAR文件）
 │   ├── cloudsim5.0.jar        # CloudSim 5.0 库
 │   └── commons-math3-3.6.1.jar # Apache Commons Math 库
@@ -157,7 +145,6 @@ Cloudlet-Scheduler-mydev/
 - **Maven**: 3.6+（用于项目构建和依赖管理）
 - **CloudSim**: 5.0（通过 Maven 自动下载）
 - **Apache Commons Math**: 3.6.1（用于数学计算，如 Gamma 函数、正态分布等）
-- **Python**: 3.7+（可选，用于结果可视化）
 
 ### 项目构建
 
@@ -482,7 +469,6 @@ public static class Config {
 2. 单目标实验使用 `createCloudlets1`（均匀分布）
 3. 多目标实验使用 `createCloudlets`（对数正态分布）
 4. 切换实验类型时，记得同时修改 `SimulationRunner.java` 和 `SchedulerFactory.java`
-5. 多目标实验的结果包含 Pareto 前沿数据，可用于后续的可视化分析（参考 `draw/` 目录下的脚本）
 
 ## 📊 性能评估指标
 
@@ -654,37 +640,6 @@ public class SchedulerFactory {
 - **Apache Commons Math 3.6.1**
 
 依赖配置在 `pom.xml` 中，编译时会自动下载。
-
-## 📈 结果可视化
-
-项目提供了丰富的 Python 可视化工具，位于 `draw/` 目录：
-
-### 主要可视化脚本
-
-1. **`pareto_front_visualization.ipynb`**：Pareto 前沿可视化
-   - 2D/3D Pareto 前沿图
-   - 不同算法的 Pareto 前沿对比
-   - 第一代 vs 最终代对比
-
-2. **`multi_algorithm_comparison.ipynb`**：多算法综合对比分析
-   - 箱线图（Boxplot）对比
-   - 热力图（Heatmap）分析
-   - 雷达图（Radar Chart）综合性能
-
-3. **`moppo_improvements_analysis.ipynb`**：MO-PPO 系列算法改进效果分析
-
-### 可视化文档
-
-- `Pareto前沿可视化使用说明.md`：Pareto 前沿可视化详细指南
-- `MO-PPO改进算法分析说明.md`：MO-PPO 算法改进点分析
-- `经典多目标算法说明.md`：NSGA-II、MOEA/D、SPEA2 算法说明
-- `BatchRunner使用说明.md`：批量运行器使用指南
-
-### 可视化依赖
-
-```bash
-pip install pandas numpy matplotlib seaborn plotly jupyter
-```
 
 ## 🛠️ 开发指南
 
