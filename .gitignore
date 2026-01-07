@@ -92,8 +92,14 @@ logs/
 results/
 results.zip
 
-# 绘图输出
-draw/
+# 绘图输出（排除图片、特定文件和文档）
+draw/*.png
+draw/*.jpg
+draw/*.jpeg
+draw/*.gif
+draw/*.md
+draw/drawpicture.py
+draw/result_visualization.ipynb
 
 # 其他
 *.bak
@@ -102,7 +108,3 @@ draw/
 
 # 实验摘要文件
 experiment_summary.csv
-
-aaa/
-bbb/
-论文/

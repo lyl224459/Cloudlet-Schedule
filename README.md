@@ -148,10 +148,6 @@ Cloudlet-Scheduler-mydev/
 
 **技术特点**：
 - 使用 Apache Commons Math 3.6.1 库进行高精度数学计算
-- 使用 `Gamma.gamma()` 函数计算 Levy 飞行的 sigma 值
-- 使用 `NormalDistribution` 生成正态分布随机数
-
-详细说明请参考：`src/CloudletScheduler/MOOptimizer/moippo/MO-IPPO算法说明.md`
 
 ## 🚀 快速开始
 
@@ -655,10 +651,7 @@ public class SchedulerFactory {
 项目使用 Maven 进行依赖管理，主要依赖包括：
 
 - **CloudSim 5.0**：从 JitPack 仓库自动下载
-- **Apache Commons Math 3.6.1**：
-  - 用于 MO-IPPO 等算法的高级数学计算
-  - 提供 `Gamma.gamma()` 函数用于 Levy 飞行
-  - 提供 `NormalDistribution` 用于高精度正态分布采样
+- **Apache Commons Math 3.6.1**
 
 依赖配置在 `pom.xml` 中，编译时会自动下载。
 
@@ -668,24 +661,17 @@ public class SchedulerFactory {
 
 ### 主要可视化脚本
 
-1. **`drawpicture.py`**：基础结果绘图脚本
-   ```bash
-   python draw/drawpicture.py
-   ```
-
-2. **`result_visualization.ipynb`**：Jupyter 笔记本，用于结果可视化分析
-
-3. **`pareto_front_visualization.ipynb`**：Pareto 前沿可视化
+1. **`pareto_front_visualization.ipynb`**：Pareto 前沿可视化
    - 2D/3D Pareto 前沿图
    - 不同算法的 Pareto 前沿对比
    - 第一代 vs 最终代对比
 
-4. **`multi_algorithm_comparison.ipynb`**：多算法综合对比分析
+2. **`multi_algorithm_comparison.ipynb`**：多算法综合对比分析
    - 箱线图（Boxplot）对比
    - 热力图（Heatmap）分析
    - 雷达图（Radar Chart）综合性能
 
-5. **`moppo_improvements_analysis.ipynb`**：MO-PPO 系列算法改进效果分析
+3. **`moppo_improvements_analysis.ipynb`**：MO-PPO 系列算法改进效果分析
 
 ### 可视化文档
 
@@ -797,7 +783,7 @@ CloudSim.init(MainRunner.Config.NUM_USER, Calendar.getInstance(), true);
 
 ## 📄 许可证
 
-MIT License
+[MIT License](./LICENSE)
 
 ## 🤝 贡献者
 
@@ -807,6 +793,5 @@ MIT License
 
 - **CloudSim 官方文档**：https://github.com/Cloudslab/cloudsim
 - **Apache Commons Math 文档**：https://commons.apache.org/proper/commons-math/
-- **项目内部文档**：`draw/` 目录下的 `.md` 文件
 
 ---
