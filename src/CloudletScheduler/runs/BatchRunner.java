@@ -3,7 +3,6 @@ package CloudletScheduler.runs;
 import org.cloudbus.cloudsim.Log;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -24,8 +23,8 @@ public class BatchRunner {
      */
     public static void main(String[] args) throws Exception {
         Log.printLine("=".repeat(80));
-        Log.printLine("🚀 Starting BATCH EXPERIMENTS");
-        Log.printLine("📋 Task numbers: 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000");
+        Log.printLine("🚀 开始批量实验");
+        Log.printLine("📋 任务数量：100, 200, 300, 400, 500, 600, 700, 800, 900, 1000");
         Log.printLine("=".repeat(80));
 
         // 任务数列表：从100到1000，每次增加100
@@ -33,7 +32,7 @@ public class BatchRunner {
 
         for (int cloudletNum : cloudletNumbers) {
             Log.printLine("\n" + "=".repeat(80));
-            Log.printLine("🔬 Running experiment with " + cloudletNum + " cloudlets");
+            Log.printLine("🔬 运行实验，任务数：" + cloudletNum);
             Log.printLine("=".repeat(80));
 
             // 使用反射修改Config.CLOUDLET_N的值
@@ -44,33 +43,19 @@ public class BatchRunner {
         }
 
         Log.printLine("\n" + "=".repeat(80));
-        Log.printLine("✅ All batch experiments completed!");
+        Log.printLine("✅ 所有批量实验已完成！");
         Log.printLine("=".repeat(80));
     }
 
     /**
-     * 使用反射修改MainRunner.Config.CLOUDLET_N的值
+     * 设置MainRunner.Config.CLOUDLET_N的值
+     * 由于CLOUDLET_N不再是final，可以直接修改
      * 
      * @param cloudletNum 新的任务数量
      */
     private static void setCloudletNumber(int cloudletNum) {
-        try {
-            Field field = MainRunner.Config.class.getDeclaredField("CLOUDLET_N");
-            field.setAccessible(true);
-            
-            // 移除final修饰符
-            Field modifiersField = Field.class.getDeclaredField("modifiers");
-            modifiersField.setAccessible(true);
-            modifiersField.setInt(field, field.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
-            
-            // 设置新值
-            field.set(null, cloudletNum);
-            
-            Log.printLine("✅ Set CLOUDLET_N to " + cloudletNum);
-        } catch (Exception e) {
-            Log.printLine("❌ Failed to set CLOUDLET_N: " + e.getMessage());
-            throw new RuntimeException("Cannot modify CLOUDLET_N", e);
-        }
+        MainRunner.Config.CLOUDLET_N = cloudletNum;
+        Log.printLine("✅ 设置任务数量为 " + cloudletNum);
     }
 
     /**
@@ -86,17 +71,17 @@ public class BatchRunner {
 
         // 在实验目录中记录任务数信息
         try (PrintWriter infoWriter = new PrintWriter(new FileWriter(experimentDir + "/experiment_info.txt"))) {
-            infoWriter.println("Experiment ID: " + experimentId);
-            infoWriter.println("Cloudlet Number: " + cloudletNum);
-            infoWriter.println("Population: " + MainRunner.Config.POPULATION);
-            infoWriter.println("Max Iterations: " + MainRunner.Config.MAX_ITER);
-            infoWriter.println("Archive Size: " + MainRunner.Config.ARCHIVE_SIZE);
-            infoWriter.println("Trials per Experiment: " + MainRunner.Config.TRIALS_PER_EXPERIMENT);
+            infoWriter.println("实验编号：" + experimentId);
+            infoWriter.println("任务数量：" + cloudletNum);
+            infoWriter.println("种群大小：" + MainRunner.Config.POPULATION);
+            infoWriter.println("最大迭代次数：" + MainRunner.Config.MAX_ITER);
+            infoWriter.println("存档大小：" + MainRunner.Config.ARCHIVE_SIZE);
+            infoWriter.println("每个调度器的试验次数：" + MainRunner.Config.TRIALS_PER_EXPERIMENT);
         }
 
-        Log.printLine("🚀 Starting EXPERIMENT #" + experimentId + " (Cloudlets: " + cloudletNum + ")");
-        Log.printLine("📁 Results will be saved in: " + experimentDir);
-        Log.printLine("🔁 Running " + MainRunner.Config.TRIALS_PER_EXPERIMENT + " trials per scheduler...");
+        Log.printLine("🚀 开始实验 #" + experimentId + "（任务数：" + cloudletNum + "）");
+        Log.printLine("📁 结果将保存到：" + experimentDir);
+        Log.printLine("🔁 运行 " + MainRunner.Config.TRIALS_PER_EXPERIMENT + " 次试验（每个调度器）...");
 
         // 打印表头
         printTrialTableHeader();
@@ -131,8 +116,8 @@ public class BatchRunner {
         // 打印最终的平均对比结果
         printFinalComparison(avgResults, experimentId, cloudletNum);
         
-        Log.printLine("✅ Experiment #" + experimentId + " completed (Cloudlets: " + cloudletNum + ").");
-        Log.printLine("📈 Results saved in: " + experimentDir);
+        Log.printLine("✅ 实验 #" + experimentId + " 已完成（任务数：" + cloudletNum + "）");
+        Log.printLine("📈 结果已保存到：" + experimentDir);
     }
 
     /**
@@ -141,7 +126,7 @@ public class BatchRunner {
     private static void printTrialTableHeader() {
         System.out.println("\n" + "=".repeat(85));
         System.out.printf("%-6s | %-12s | %10s | %10s | %10s | %12s%n",
-                "Trial", "Scheduler", "Makespan", "TotalTime", "LoadBalance", "Cost");
+                "试验", "调度器", "最大完成时间", "总时间", "负载均衡", "成本");
         System.out.println("=".repeat(85));
     }
 
@@ -263,10 +248,10 @@ public class BatchRunner {
      */
     private static void printFinalComparison(List<MainRunner.AvgResult> avgResults, int experimentId, int cloudletNum) {
         System.out.println("\n" + "=".repeat(75));
-        System.out.println("📊 FINAL AVERAGE COMPARISON (Experiment #" + experimentId + ", Cloudlets: " + cloudletNum + ")");
+        System.out.println("📊 最终平均性能对比（实验 #" + experimentId + "，任务数：" + cloudletNum + "）");
         System.out.println("=".repeat(75));
         System.out.printf("%-15s | %12s | %12s | %12s | %12s%n",
-                "Scheduler", "AvgMakespan", "AvgTotalTime", "AvgLoadBalance", "AvgCost");
+                "调度器", "平均最大完成时间", "平均总时间", "平均负载均衡", "平均成本");
         System.out.println("-".repeat(75));
 
         for (MainRunner.AvgResult r : avgResults) {

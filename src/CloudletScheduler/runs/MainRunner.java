@@ -18,7 +18,7 @@ public class MainRunner {
      * 配置常量类：集中管理实验参数。
      */
     public static class Config {
-        public static final int CLOUDLET_N = 300;               // 云任务数量
+        public static int CLOUDLET_N = 300;               // 云任务数量（可动态修改，用于批量实验）
         public static final int NUM_USER = 1;                    // 用户数量
         public static final String BASE_RESULT_DIR = "results";  // 基础结果存储目录
         public static final int TRIALS_PER_EXPERIMENT = 10;       // 每种调度器运行的试验次数

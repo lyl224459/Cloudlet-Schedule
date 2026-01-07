@@ -180,8 +180,11 @@ public class NSGAII {
 
     /**
      * 计算拥挤距离
+     * 
+     * @param frontIndices 前沿中个体的索引数组
+     * @param objArray 目标值数组（可以是objectives或combinedObj）
      */
-    private double[] computeCrowdingDistance(int[] frontIndices) {
+    private double[] computeCrowdingDistance(int[] frontIndices, ObjectiveValues[] objArray) {
         int frontSize = frontIndices.length;
         double[] distance = new double[frontSize];
         
@@ -190,7 +193,7 @@ public class NSGAII {
             return distance;
         }
 
-        int numObjectives = objectives[frontIndices[0]].values.length;
+        int numObjectives = objArray[frontIndices[0]].values.length;
 
         for (int objIdx = 0; objIdx < numObjectives; objIdx++) {
             // 按当前目标值排序
@@ -200,28 +203,35 @@ public class NSGAII {
             }
             final int finalObjIdx = objIdx;
             Arrays.sort(sortedIndices, Comparator.comparingDouble(
-                i -> objectives[frontIndices[i]].values[finalObjIdx]));
+                i -> objArray[frontIndices[i]].values[finalObjIdx]));
 
             // 边界解距离设为无穷大
             distance[sortedIndices[0]] = Double.POSITIVE_INFINITY;
             distance[sortedIndices[frontSize - 1]] = Double.POSITIVE_INFINITY;
 
             // 计算目标值的范围
-            double minObj = objectives[frontIndices[sortedIndices[0]]].values[objIdx];
-            double maxObj = objectives[frontIndices[sortedIndices[frontSize - 1]]].values[objIdx];
+            double minObj = objArray[frontIndices[sortedIndices[0]]].values[objIdx];
+            double maxObj = objArray[frontIndices[sortedIndices[frontSize - 1]]].values[objIdx];
             double range = maxObj - minObj;
             if (range < 1e-10) range = 1.0;
 
             // 计算中间解的拥挤距离
             for (int i = 1; i < frontSize - 1; i++) {
                 int idx = sortedIndices[i];
-                double prevObj = objectives[frontIndices[sortedIndices[i - 1]]].values[objIdx];
-                double nextObj = objectives[frontIndices[sortedIndices[i + 1]]].values[objIdx];
+                double prevObj = objArray[frontIndices[sortedIndices[i - 1]]].values[objIdx];
+                double nextObj = objArray[frontIndices[sortedIndices[i + 1]]].values[objIdx];
                 distance[idx] += (nextObj - prevObj) / range;
             }
         }
 
         return distance;
+    }
+    
+    /**
+     * 计算拥挤距离（使用类成员objectives数组，用于当前种群）
+     */
+    private double[] computeCrowdingDistance(int[] frontIndices) {
+        return computeCrowdingDistance(frontIndices, objectives);
     }
 
     /**
@@ -405,11 +415,11 @@ public class NSGAII {
                 currentRank++;
             }
 
-            // 计算合并后种群的拥挤距离
+            // 计算合并后种群的拥挤距离（使用combinedObj数组）
             double[] combinedCrowdingDistance = new double[2 * population];
             for (List<Integer> front : combinedFrontMap.values()) {
                 int[] frontArray = front.stream().mapToInt(i -> i).toArray();
-                double[] frontDistances = computeCrowdingDistance(frontArray);
+                double[] frontDistances = computeCrowdingDistance(frontArray, combinedObj);
                 for (int i = 0; i < front.size(); i++) {
                     combinedCrowdingDistance[front.get(i)] = frontDistances[i];
                 }
