@@ -99,3 +99,10 @@ draw/
 *.bak
 *.backup
 *.orig
+
+# 实验摘要文件
+experiment_summary.csv
+
+aaa/
+bbb/
+论文/

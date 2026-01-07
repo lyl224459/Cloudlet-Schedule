@@ -21,10 +21,17 @@ public class MOPPO2Scheduler extends Scheduler {
     private static final int POPULATION = MainRunner.Config.POPULATION;
     private static final int MAX_FES = MainRunner.Config.MAX_ITER * MainRunner.Config.POPULATION;
     private static final int ARCHIVE_SIZE = MainRunner.Config.ARCHIVE_SIZE;
+    
+    private ParetoArchive paretoArchive; // 保存Pareto存档
 
     public MOPPO2Scheduler(List<Cloudlet> cloudletList, List<Vm> vmList) {
         super(cloudletList, vmList);
         Log.printLine("Using Improved Multi-Objective Predatory Prey Optimization (MO-PPO2) scheduler");
+    }
+    
+    @Override
+    public ParetoArchive getParetoArchive() {
+        return paretoArchive;
     }
 
     @Override
@@ -32,15 +39,11 @@ public class MOPPO2Scheduler extends Scheduler {
 
         OptFunctionMulti evalFunc = (int[] assignment) -> {
             double makespan = estimateMakespan(assignment);
-            double totalTime = estimateTotalTime(assignment);
             double cost = estimateCost(assignment);
-            double lb = estimateLB(assignment);
-            return new ObjectiveValues(
-                    makespan,
-//                    totalTime,
-                    cost,
-                    lb
-            );
+            double lb = estimateLBForMO(assignment); // 多目标优化使用变异系数
+            double resourceUtilization = estimateResourceUtilization(assignment);
+            double ruMinimized = 1.0 - resourceUtilization;
+            return new ObjectiveValues(makespan, cost, lb, ruMinimized);
         };
 
         MOPPO2 optimizer = new MOPPO2(
@@ -54,6 +57,7 @@ public class MOPPO2Scheduler extends Scheduler {
         );
 
         ParetoArchive archive = optimizer.execute();
+        this.paretoArchive = archive; // 保存Pareto存档
 
         if (archive.isEmpty()) {
             Log.printLine("⚠️ MO-PPO2 produced empty archive. Using random assignment.");

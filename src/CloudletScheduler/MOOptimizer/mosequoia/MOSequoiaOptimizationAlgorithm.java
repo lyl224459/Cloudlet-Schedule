@@ -20,7 +20,8 @@ public class MOSequoiaOptimizationAlgorithm {
 
     private double[][] population;              // 当前种群（实数编码）
     private ObjectiveValues[] objectives;       // 每个个体的多目标值
-    private ParetoArchive archive;              // Pareto 存档
+    private ParetoArchive archive;
+    private ParetoArchive firstGenerationArchive; // 第一代Pareto存档快照              // Pareto 存档
 
     private static final Random random = new Random();
 
@@ -56,6 +57,17 @@ public class MOSequoiaOptimizationAlgorithm {
             objectives[i] = evaluate(population[i]);
             archive.add(population[i].clone(), objectives[i]);
         }
+        
+        // 保存第一代Pareto存档快照（初始化完成后）
+        firstGenerationArchive = archive.deepCopy();
+    }
+    
+    /**
+     * 获取第一代Pareto存档快照
+     * @return 第一代Pareto存档
+     */
+    public ParetoArchive getFirstGenerationArchive() {
+        return firstGenerationArchive;
     }
 
     /**

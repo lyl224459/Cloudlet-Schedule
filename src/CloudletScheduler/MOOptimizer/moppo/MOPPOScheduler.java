@@ -22,10 +22,26 @@ public class MOPPOScheduler extends Scheduler {
     private static final int POPULATION = MainRunner.Config.POPULATION;
     private static final int MAX_FES = MainRunner.Config.MAX_ITER * MainRunner.Config.POPULATION; // 转换为函数评估次数
     private static final int ARCHIVE_SIZE = MainRunner.Config.ARCHIVE_SIZE;
+    
+    private ParetoArchive paretoArchive; // 保存最终Pareto存档
+    private ParetoArchive firstGenerationArchive; // 保存第一代Pareto存档
 
     public MOPPOScheduler(List<Cloudlet> cloudletList, List<Vm> vmList) {
         super(cloudletList, vmList);
         Log.printLine("Using Multi-Objective Predatory Prey Optimization (MO-PPO) scheduler");
+    }
+    
+    @Override
+    public ParetoArchive getParetoArchive() {
+        return paretoArchive;
+    }
+    
+    /**
+     * 获取第一代Pareto存档
+     * @return 第一代Pareto存档
+     */
+    public ParetoArchive getFirstGenerationArchive() {
+        return firstGenerationArchive;
     }
 
     @Override
@@ -33,12 +49,12 @@ public class MOPPOScheduler extends Scheduler {
         // 定义多目标评估函数：复用父类的 estimateXXX 方法
         OptFunctionMulti evalFunc = (int[] assignment) -> {
             double makespan = estimateMakespan(assignment);      // 最大完成时间
-            double totalTime = estimateTotalTime(assignment);    // 总执行时间
             double cost = estimateCost(assignment);              // 总成本
-            double lb = estimateLB(assignment);                  // 负载均衡度（值越小越均衡）
-            return new ObjectiveValues(makespan,
-//                    totalTime,
-                    cost, lb);
+            double lb = estimateLBForMO(assignment);                  // 负载均衡度（值越小越均衡，使用变异系数）
+            double resourceUtilization = estimateResourceUtilization(assignment); // 资源利用率
+            // 转换为最小化：1 - utilization
+            double ruMinimized = 1.0 - resourceUtilization;
+            return new ObjectiveValues(makespan, cost, lb, ruMinimized);
         };
 
         // 创建 MO-PPO 优化器
@@ -54,6 +70,8 @@ public class MOPPOScheduler extends Scheduler {
 
         // 执行优化
         ParetoArchive archive = optimizer.execute();
+        this.paretoArchive = archive; // 保存最终Pareto存档
+        this.firstGenerationArchive = optimizer.getFirstGenerationArchive(); // 保存第一代Pareto存档
 
         // 若存档为空，回退到随机分配
         if (archive.isEmpty()) {

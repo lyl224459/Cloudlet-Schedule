@@ -22,10 +22,23 @@ public class MODBOScheduler extends Scheduler {
     private static final int POPULATION = MainRunner.Config.POPULATION;
     private static final int MAX_ITER = MainRunner.Config.MAX_ITER;
     private static final int ARCHIVE_SIZE = MainRunner.Config.ARCHIVE_SIZE;
+    
+    private ParetoArchive paretoArchive; // 保存最终Pareto存档
+    private ParetoArchive firstGenerationArchive; // 保存第一代Pareto存档
 
     public MODBOScheduler(List<Cloudlet> cloudletList, List<Vm> vmList) {
         super(cloudletList, vmList);
         Log.printLine("Using Multi-Objective Dung Beetle Optimizer (MO-DBO) scheduler");
+    }
+    
+    @Override
+    public ParetoArchive getParetoArchive() {
+        return paretoArchive;
+    }
+    
+    @Override
+    public ParetoArchive getFirstGenerationArchive() {
+        return firstGenerationArchive;
     }
 
     @Override
@@ -35,10 +48,10 @@ public class MODBOScheduler extends Scheduler {
             double makespan = estimateMakespan(assignment);
 //            double totalTime = estimateTotalTime(assignment);
             double cost = estimateCost(assignment);
-            double lb = estimateLB(assignment);
-            return new ObjectiveValues(makespan,
-//                    totalTime,
-                    cost, lb);
+            double lb = estimateLBForMO(assignment); // 多目标优化使用变异系数
+            double resourceUtilization = estimateResourceUtilization(assignment);
+            double ruMinimized = 1.0 - resourceUtilization;
+            return new ObjectiveValues(makespan, cost, lb, ruMinimized);
         };
 
         // 初始化 MO-DBO 优化器
@@ -54,6 +67,8 @@ public class MODBOScheduler extends Scheduler {
 
         // 执行优化
         ParetoArchive archive = optimizer.execute();
+        this.paretoArchive = archive; // 保存最终Pareto存档
+        this.firstGenerationArchive = optimizer.getFirstGenerationArchive(); // 保存第一代Pareto存档
 
         // 若存档为空，回退到随机分配
         if (archive.size() == 0) {

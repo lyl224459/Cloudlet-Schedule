@@ -25,6 +25,7 @@ public class MOPredatoryPreyOptimization {
     private ObjectiveValues[] flockMemoryF;
 
     private ParetoArchive archive;
+    private ParetoArchive firstGenerationArchive; // 第一代Pareto存档快照
     private int evaluations;
     private static final Random random = new Random();
 
@@ -66,6 +67,17 @@ public class MOPredatoryPreyOptimization {
             flockMemoryX[i] = positions[i].clone();
             flockMemoryF[i] = evaluate(positions[i]);
         }
+        
+        // 保存第一代Pareto存档快照（初始化完成后）
+        firstGenerationArchive = archive.deepCopy();
+    }
+    
+    /**
+     * 获取第一代Pareto存档快照
+     * @return 第一代Pareto存档
+     */
+    public ParetoArchive getFirstGenerationArchive() {
+        return firstGenerationArchive;
     }
 
     private void adjustPosition(int idx) {

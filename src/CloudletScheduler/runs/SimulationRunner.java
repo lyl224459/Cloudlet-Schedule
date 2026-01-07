@@ -30,7 +30,7 @@ public class SimulationRunner {
         /**
          *  数据集创建引入
          */
-        List<Cloudlet> cloudletList = DatacenterCreator.createCloudlets1(brokerId, rand);
+        List<Cloudlet> cloudletList = DatacenterCreator.createCloudlets(brokerId, rand);
 
         broker.submitVmList(vmList);
         broker.submitCloudletList(cloudletList);
@@ -41,6 +41,18 @@ public class SimulationRunner {
         CloudSim.startSimulation();
 
         List<Cloudlet> finishedCloudlets = broker.getCloudletReceivedList();
-        return ResultAnalyzer.analyzeResults(finishedCloudlets, vmList.size());
+        SimulationResult result = ResultAnalyzer.analyzeResults(finishedCloudlets, vmList.size());
+        
+        // 如果是多目标算法，保存Pareto存档
+        if (scheduler.getParetoArchive() != null) {
+            result.setParetoArchive(scheduler.getParetoArchive());
+        }
+        
+        // 保存第一代Pareto存档
+        if (scheduler.getFirstGenerationArchive() != null) {
+            result.setFirstGenerationArchive(scheduler.getFirstGenerationArchive());
+        }
+        
+        return result;
     }
 }

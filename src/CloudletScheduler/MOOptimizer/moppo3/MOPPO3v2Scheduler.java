@@ -27,10 +27,26 @@ public class MOPPO3v2Scheduler extends Scheduler {
     private static final int POPULATION = MainRunner.Config.POPULATION;
     private static final int MAX_FES = MainRunner.Config.MAX_ITER * MainRunner.Config.POPULATION;
     private static final int ARCHIVE_SIZE = MainRunner.Config.ARCHIVE_SIZE;
+    
+    private CloudletScheduler.MOOptimizer.moppo2.ParetoArchive paretoArchive; // 保存Pareto存档
 
     public MOPPO3v2Scheduler(List<Cloudlet> cloudletList, List<Vm> vmList) {
         super(cloudletList, vmList);
         Log.printLine("Using Balanced Multi-Objective PPO (MO-PPO3v2) scheduler");
+    }
+    
+    @Override
+    public CloudletScheduler.MOOptimizer.ParetoArchive getParetoArchive() {
+        // 将moppo2.ParetoArchive转换为MOOptimizer.ParetoArchive
+        if (paretoArchive == null) return null;
+        CloudletScheduler.MOOptimizer.ParetoArchive result = 
+            new CloudletScheduler.MOOptimizer.ParetoArchive(paretoArchive.getMaxSize());
+        List<double[]> solutions = paretoArchive.getSolutions();
+        List<CloudletScheduler.datacenter.ObjectiveValues> objectives = paretoArchive.getObjectives();
+        for (int i = 0; i < solutions.size(); i++) {
+            result.add(solutions.get(i), objectives.get(i));
+        }
+        return result;
     }
 
     @Override
@@ -38,12 +54,10 @@ public class MOPPO3v2Scheduler extends Scheduler {
         OptFunctionMulti evalFunc = (int[] assignment) -> {
             double makespan = estimateMakespan(assignment);
             double cost = estimateCost(assignment);
-            double lb = estimateLB(assignment);
-            return new ObjectiveValues(
-                    makespan,
-                    cost,
-                    lb
-            );
+            double lb = estimateLBForMO(assignment); // 多目标优化使用变异系数
+            double resourceUtilization = estimateResourceUtilization(assignment);
+            double ruMinimized = 1.0 - resourceUtilization;
+            return new ObjectiveValues(makespan, cost, lb, ruMinimized);
         };
 
         MOPPO3v2 optimizer = new MOPPO3v2(
@@ -56,7 +70,8 @@ public class MOPPO3v2Scheduler extends Scheduler {
                 ARCHIVE_SIZE
         );
 
-        ParetoArchive archive = optimizer.execute();
+        CloudletScheduler.MOOptimizer.moppo2.ParetoArchive archive = optimizer.execute();
+        this.paretoArchive = archive; // 保存Pareto存档
 
         if (archive.isEmpty()) {
             Log.printLine("⚠️ MO-PPO3v2 produced empty archive. Using random assignment.");
@@ -109,15 +124,15 @@ public class MOPPO3v2Scheduler extends Scheduler {
 
         // 理想点：各目标的最小值
         // 计算每个解到理想点的归一化欧氏距离
-        // 权重：makespan=0.35, cost=0.35, lb=0.30 (更均衡的权重)
-        double[] weights = {0.35, 0.35, 0.30};
+        // 权重：makespan=0.3, cost=0.3, lb=0.25, resourceUtilization=0.15 (更均衡的权重)
+        double[] weights = {0.3, 0.3, 0.25, 0.15};
         
         int bestIdx = 0;
         double bestDist = Double.MAX_VALUE;
         
         for (int i = 0; i < objectives.size(); i++) {
             double dist = 0;
-            for (int j = 0; j < numObj; j++) {
+            for (int j = 0; j < Math.min(numObj, weights.length); j++) {
                 double range = maxVals[j] - minVals[j];
                 if (range > 1e-10) {
                     double normalized = (objectives.get(i).values[j] - minVals[j]) / range;

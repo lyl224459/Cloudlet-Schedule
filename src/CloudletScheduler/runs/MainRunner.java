@@ -18,7 +18,7 @@ public class MainRunner {
      * 配置常量类：集中管理实验参数。
      */
     public static class Config {
-        public static final int CLOUDLET_N = 2000;               // 云任务数量
+        public static final int CLOUDLET_N = 100;               // 云任务数量
         public static final int NUM_USER = 1;                    // 用户数量
         public static final String BASE_RESULT_DIR = "results";  // 基础结果存储目录
         public static final int TRIALS_PER_EXPERIMENT = 10;       // 每种调度器运行的试验次数
@@ -72,6 +72,16 @@ public class MainRunner {
 
                 // 将本次 trial 结果追加写入对应调度器的 CSV 文件
                 saveTrialResultToFile(experimentDir, factory.name, trial, result);
+                
+                // 如果结果包含Pareto存档，保存Pareto前沿数据
+                if (result.hasParetoArchive()) {
+                    saveParetoFrontToFile(experimentDir, factory.name, trial, result.getParetoArchive(), "final");
+                }
+                
+                // 如果结果包含第一代Pareto存档，保存第一代Pareto前沿数据
+                if (result.hasFirstGenerationArchive()) {
+                    saveParetoFrontToFile(experimentDir, factory.name, trial, result.getFirstGenerationArchive(), "first");
+                }
 
                 // 控制台打印本次 trial 的结果
                 printTrialResult(trial, factory.name, result);
@@ -115,6 +125,51 @@ public class MainRunner {
             }
             writer.printf("%d,%.6f,%.6f,%.6f,%.6f%n",
                     trial, result.makespan, result.totalTime, result.loadBalance, result.cost);
+        }
+    }
+
+    /**
+     * 保存Pareto前沿数据到CSV文件
+     *
+     * @param experimentDir 实验目录路径
+     * @param schedulerName 调度器名称
+     * @param trial         当前 trial 编号
+     * @param archive       Pareto存档
+     * @param generation    代数标识（"first"或"final"）
+     * @throws IOException 文件写入异常
+     */
+    private static void saveParetoFrontToFile(String experimentDir, String schedulerName,
+                                               int trial, CloudletScheduler.MOOptimizer.ParetoArchive archive, String generation) throws IOException {
+        // 检查archive是否为空
+        if (archive == null || archive.isEmpty()) {
+            return; // 如果存档为空，不保存文件
+        }
+        
+        String paretoDir = experimentDir + "/pareto_fronts";
+        Files.createDirectories(Paths.get(paretoDir));
+        
+        String filePath = paretoDir + "/" + schedulerName + "_trial_" + trial + "_" + generation + ".csv";
+        
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filePath))) {
+            writer.println("Makespan,Cost,LoadBalance,ResourceUtilization");
+            
+            List<CloudletScheduler.datacenter.ObjectiveValues> objectives = archive.getObjectives();
+            
+            if (objectives == null || objectives.isEmpty()) {
+                return; // 如果没有目标值，不保存文件
+            }
+            
+            for (CloudletScheduler.datacenter.ObjectiveValues obj : objectives) {
+                if (obj == null || obj.getValues() == null || obj.getValues().length < 4) {
+                    continue; // 跳过无效的目标值（现在需要4个目标）
+                }
+                // 多目标优化四个目标：makespan, cost, loadBalance, resourceUtilization
+                writer.printf("%.6f,%.6f,%.6f,%.6f%n",
+                        obj.getValues()[0],  // makespan
+                        obj.getValues()[1],  // cost
+                        obj.getValues()[2],  // loadBalance
+                        obj.getValues()[3]); // resourceUtilization
+            }
         }
     }
 

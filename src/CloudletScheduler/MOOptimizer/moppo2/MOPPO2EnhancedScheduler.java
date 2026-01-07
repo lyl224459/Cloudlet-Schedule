@@ -20,10 +20,26 @@ public class MOPPO2EnhancedScheduler extends Scheduler {
     private static final int POPULATION = MainRunner.Config.POPULATION;
     private static final int MAX_FES = MainRunner.Config.MAX_ITER * MainRunner.Config.POPULATION;
     private static final int ARCHIVE_SIZE = MainRunner.Config.ARCHIVE_SIZE;
+    
+    private CloudletScheduler.MOOptimizer.moppo2.ParetoArchive paretoArchive; // 保存Pareto存档
 
     public MOPPO2EnhancedScheduler(List<Cloudlet> cloudletList, List<Vm> vmList) {
         super(cloudletList, vmList);
         Log.printLine("Using Enhanced Multi-Objective Predatory Prey Optimization (MO-PPO2Enhanced) scheduler");
+    }
+    
+    @Override
+    public CloudletScheduler.MOOptimizer.ParetoArchive getParetoArchive() {
+        // 将moppo2.ParetoArchive转换为MOOptimizer.ParetoArchive
+        if (paretoArchive == null) return null;
+        CloudletScheduler.MOOptimizer.ParetoArchive result = 
+            new CloudletScheduler.MOOptimizer.ParetoArchive(paretoArchive.getMaxSize());
+        List<double[]> solutions = paretoArchive.getSolutions();
+        List<CloudletScheduler.datacenter.ObjectiveValues> objectives = paretoArchive.getObjectives();
+        for (int i = 0; i < solutions.size(); i++) {
+            result.add(solutions.get(i), objectives.get(i));
+        }
+        return result;
     }
 
     @Override
@@ -32,16 +48,11 @@ public class MOPPO2EnhancedScheduler extends Scheduler {
         // 多目标优化函数：复用父类评估方法
         OptFunctionMulti evalFunc = (int[] assignment) -> {
             double makespan = estimateMakespan(assignment);
-            double totalTime = estimateTotalTime(assignment);
             double cost = estimateCost(assignment);
-            double lb = estimateLB(assignment);
-
-            return new ObjectiveValues(
-                    makespan,
-//                    totalTime,
-                    cost,
-                    lb
-            );
+            double lb = estimateLBForMO(assignment); // 多目标优化使用变异系数
+            double resourceUtilization = estimateResourceUtilization(assignment);
+            double ruMinimized = 1.0 - resourceUtilization;
+            return new ObjectiveValues(makespan, cost, lb, ruMinimized);
         };
 
         // 创建优化器
@@ -56,7 +67,8 @@ public class MOPPO2EnhancedScheduler extends Scheduler {
         );
 
         // 执行优化
-        ParetoArchive archive = optimizer.execute();
+        CloudletScheduler.MOOptimizer.moppo2.ParetoArchive archive = optimizer.execute();
+        this.paretoArchive = archive; // 保存Pareto存档（moppo2.ParetoArchive类型）
 
         // 回退：存档为空 → 随机分配
         if (archive.isEmpty()) {

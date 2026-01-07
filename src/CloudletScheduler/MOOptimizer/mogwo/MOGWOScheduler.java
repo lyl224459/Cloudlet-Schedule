@@ -21,10 +21,23 @@ public class MOGWOScheduler extends Scheduler {
     private static final int POPULATION = MainRunner.Config.POPULATION;
     private static final int MAX_ITER = MainRunner.Config.MAX_ITER;
     private static final int ARCHIVE_SIZE = MainRunner.Config.ARCHIVE_SIZE;
+    
+    private ParetoArchive paretoArchive; // 保存最终Pareto存档
+    private ParetoArchive firstGenerationArchive; // 保存第一代Pareto存档
 
     public MOGWOScheduler(List<Cloudlet> cloudletList, List<Vm> vmList) {
         super(cloudletList, vmList);
         Log.printLine("Using Multi-Objective Grey Wolf Optimizer (MO-GWO) scheduler");
+    }
+    
+    @Override
+    public ParetoArchive getParetoArchive() {
+        return paretoArchive;
+    }
+    
+    @Override
+    public ParetoArchive getFirstGenerationArchive() {
+        return firstGenerationArchive;
     }
 
     @Override
@@ -33,11 +46,10 @@ public class MOGWOScheduler extends Scheduler {
             double makespan = estimateMakespan(assignment);
 //            double totalTime = estimateTotalTime(assignment);
             double cost = estimateCost(assignment);
-            double lb = estimateLB(assignment);
-            return new ObjectiveValues(makespan,
-//                    totalTime,
-                    cost,
-                    lb);
+            double lb = estimateLBForMO(assignment); // 多目标优化使用变异系数
+            double resourceUtilization = estimateResourceUtilization(assignment);
+            double ruMinimized = 1.0 - resourceUtilization;
+            return new ObjectiveValues(makespan, cost, lb, ruMinimized);
         };
 
         MOGreyWolfOptimizer optimizer = new MOGreyWolfOptimizer(
@@ -51,6 +63,8 @@ public class MOGWOScheduler extends Scheduler {
         );
 
         ParetoArchive archive = optimizer.execute();
+        this.paretoArchive = archive; // 保存最终Pareto存档
+        this.firstGenerationArchive = optimizer.getFirstGenerationArchive(); // 保存第一代Pareto存档
 
         if (archive.size() == 0) {
             Log.printLine("⚠️ Warning: MO-GWO returned empty Pareto archive. Using random assignment.");

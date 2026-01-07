@@ -24,6 +24,7 @@ public class MODungBeetleOptimizer {
     private double[][] pX;                   // 个体历史最优位置
 
     private ParetoArchive archive;           // 外部存档（非支配解集）
+    private ParetoArchive firstGenerationArchive; // 第一代Pareto存档快照
 
     private static final Random random = new Random();
     private static final double P_PERCENT = 0.2;
@@ -70,6 +71,17 @@ public class MODungBeetleOptimizer {
 
             archive.add(x[i], obj);
         }
+        
+        // 保存第一代Pareto存档快照（初始化完成后）
+        firstGenerationArchive = archive.deepCopy();
+    }
+    
+    /**
+     * 获取第一代Pareto存档快照
+     * @return 第一代Pareto存档
+     */
+    public ParetoArchive getFirstGenerationArchive() {
+        return firstGenerationArchive;
     }
 
     private void adjustPosition(int i) {

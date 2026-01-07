@@ -21,6 +21,7 @@ public class MOWhaleOptimizationAlgorithm {
     private double[][] positions;
     private ObjectiveValues[] objectives;
     private ParetoArchive archive;
+    private ParetoArchive firstGenerationArchive; // 第一代Pareto存档快照
 
     private static final Random random = new Random();
     private static final double F = 0.8; // 差分变异因子（可选）
@@ -65,6 +66,17 @@ public class MOWhaleOptimizationAlgorithm {
             objectives[i] = evaluate(positions[i]);
             archive.add(positions[i].clone(), objectives[i]);
         }
+        
+        // 保存第一代Pareto存档快照（初始化完成后）
+        firstGenerationArchive = archive.deepCopy();
+    }
+    
+    /**
+     * 获取第一代Pareto存档快照
+     * @return 第一代Pareto存档
+     */
+    public ParetoArchive getFirstGenerationArchive() {
+        return firstGenerationArchive;
     }
 
     private ObjectiveValues evaluate(double[] sol) {

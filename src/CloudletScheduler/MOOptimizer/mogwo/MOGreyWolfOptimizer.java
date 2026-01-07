@@ -22,6 +22,7 @@ public class MOGreyWolfOptimizer {
 
     private double[][] positions;
     private ParetoArchive archive;
+    private ParetoArchive firstGenerationArchive; // 第一代Pareto存档快照
 
     private static final Random random = new Random();
 
@@ -61,6 +62,17 @@ public class MOGreyWolfOptimizer {
             ObjectiveValues obj = optFunction.evaluate(assignment);
             archive.add(positions[i], obj);
         }
+        
+        // 保存第一代Pareto存档快照（初始化完成后）
+        firstGenerationArchive = archive.deepCopy();
+    }
+    
+    /**
+     * 获取第一代Pareto存档快照
+     * @return 第一代Pareto存档
+     */
+    public ParetoArchive getFirstGenerationArchive() {
+        return firstGenerationArchive;
     }
 
     private void adjustPosition(int idx) {

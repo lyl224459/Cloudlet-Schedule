@@ -23,6 +23,8 @@ public class MOIWOAScheduler extends Scheduler {
     private static final int POPULATION = MainRunner.Config.POPULATION;
     private static final int MAX_ITER = MainRunner.Config.MAX_ITER;
     private static final int ARCHIVE_SIZE = MainRunner.Config.ARCHIVE_SIZE;
+    
+    private ParetoArchive paretoArchive; // 保存Pareto存档
 
     // --- 约束参数 ---
     private final int maxTasksPerVm; // 每个 VM 最大任务数（可根据 VM 能力动态计算）
@@ -33,6 +35,11 @@ public class MOIWOAScheduler extends Scheduler {
         this.maxTasksPerVm = (int) Math.ceil((double) cloudletNum / vmNum * 1.5);
         Log.printLine("Using MO-IWOA with Greedy Initialization and Constraint Handling");
         Log.printLine("→ Max tasks per VM: " + maxTasksPerVm);
+    }
+    
+    @Override
+    public ParetoArchive getParetoArchive() {
+        return paretoArchive;
     }
 
     @Override
@@ -47,8 +54,10 @@ public class MOIWOAScheduler extends Scheduler {
         OptFunctionMulti evalFunc = (int[] assignment) -> {
             double makespan = estimateMakespan(assignment);
             double cost = estimateCost(assignment);
-            double lb = estimateLB(assignment);
-            return new ObjectiveValues(makespan, cost, lb);
+            double lb = estimateLBForMO(assignment); // 多目标优化使用变异系数
+            double resourceUtilization = estimateResourceUtilization(assignment);
+            double ruMinimized = 1.0 - resourceUtilization;
+            return new ObjectiveValues(makespan, cost, lb, ruMinimized);
         };
 
         // 创建优化器（传入约束）
@@ -65,6 +74,7 @@ public class MOIWOAScheduler extends Scheduler {
         );
 
         ParetoArchive archive = optimizer.execute();
+        this.paretoArchive = archive; // 保存Pareto存档
 
         if (archive.size() == 0) {
             Log.printLine("⚠️ Warning: MO-IWOA returned empty Pareto archive. Using greedy fallback.");

@@ -19,7 +19,8 @@ public class MOSunflowerOptimization {
     private final double ub;                    // 变量上界
     private final int dim;                      // 决策变量维度
 
-    private ParetoArchive archive;              // Pareto 存档
+    private ParetoArchive archive;
+    private ParetoArchive firstGenerationArchive; // 第一代Pareto存档快照              // Pareto 存档
     private static final Random random = new Random();
 
     public MOSunflowerOptimization(
@@ -111,6 +112,9 @@ public class MOSunflowerOptimization {
             FEs++;
             if (FEs >= MaxFEs) break;
         }
+        
+        // 保存第一代Pareto存档快照（初始化完成后）
+        firstGenerationArchive = archive.deepCopy();
 
         // 主循环
         while (FEs < MaxFEs) {
@@ -185,5 +189,13 @@ public class MOSunflowerOptimization {
 
         System.out.printf("MO-SFOA completed. Pareto archive size = %d%n", archive.size());
         return archive;
+    }
+    
+    /**
+     * 获取第一代Pareto存档快照
+     * @return 第一代Pareto存档
+     */
+    public ParetoArchive getFirstGenerationArchive() {
+        return firstGenerationArchive;
     }
 }

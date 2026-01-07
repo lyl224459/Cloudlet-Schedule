@@ -263,5 +263,18 @@ public class ParetoArchive {
     public int getMaxSize() {
         return maxSize;
     }
+    
+    /**
+     * 深拷贝Pareto存档
+     * @return 新的ParetoArchive副本
+     */
+    public ParetoArchive deepCopy() {
+        ParetoArchive copy = new ParetoArchive(this.maxSize);
+        for (int i = 0; i < this.solutions.size(); i++) {
+            copy.solutions.add(this.solutions.get(i).clone());
+            copy.objectives.add(this.objectives.get(i).clone());
+        }
+        return copy;
+    }
 
 }

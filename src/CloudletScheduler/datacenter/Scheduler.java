@@ -42,6 +42,22 @@ public abstract class Scheduler {
 	public abstract int[] allocate();
 
 	/**
+	 * 获取Pareto存档（仅多目标优化算法实现）
+	 * @return Pareto存档，单目标算法返回null
+	 */
+	public CloudletScheduler.MOOptimizer.ParetoArchive getParetoArchive() {
+		return null;
+	}
+	
+	/**
+	 * 获取第一代Pareto存档（仅多目标优化算法实现）
+	 * @return 第一代Pareto存档，单目标算法返回null
+	 */
+	public CloudletScheduler.MOOptimizer.ParetoArchive getFirstGenerationArchive() {
+		return null;
+	}
+
+	/**
 	 * 调度云任务到虚拟机
 	 * 此方法首先分配云任务到合适的虚拟机，然后更新每个云任务的虚拟机ID，
 	 * 并打印出调度方案的估计值，包括最大完成时间、负载均衡度、成本、总时间和适应度
@@ -74,15 +90,15 @@ public abstract class Scheduler {
 	/**
 	 * 根据云任务到虚拟机的分配情况，估算Load Balancing（LB）值
 	 * LB值用于衡量虚拟机之间的负载均衡程度，LB值越小表示负载分配越均衡
+	 * 单目标函数使用标准差（Standard Deviation）作为负载均衡度指标
+	 * 注意：此方法仅用于单目标优化，多目标优化使用MultiObjectiveEvaluator中的estimateLB
 	 *
 	 * @param cloudletToVm 一个数组，表示每个云任务分配给的虚拟机ID
-	 * @return 返回计算得到的LB值
+	 * @return 返回计算得到的LB值（标准差）
 	 */
 	public double estimateLB(int[] cloudletToVm) {
 	    // 初始化一个数组，用于存储每台虚拟机的执行时间
 	    double[] executeTimeOfVM = new double[vmNum];
-	    // 初始化平均执行时间
-	    double avgExecuteTime = 0;
 
 	    // 遍历所有云任务，计算每个任务的执行时间，并累加到相应虚拟机的执行时间中
 	    for (int i = 0; i < cloudletNum; i++) {
@@ -91,26 +107,105 @@ public abstract class Scheduler {
 	        // 获取当前云任务分配的虚拟机ID
 	        int vmId = cloudletToVm[i];
 	        // 计算当前云任务在分配的虚拟机上的执行时间
-	        double execTime = length / vmList.get(vmId).getMips();
+	        double execTime = (double) length / vmList.get(vmId).getMips();
 	        // 累加执行时间到对应虚拟机
 	        executeTimeOfVM[vmId] += execTime;
-	        // 累加执行时间到总执行时间，用于后续计算平均执行时间
-	        avgExecuteTime += execTime;
 	    }
-	    // 计算虚拟机的平均执行时间
-	    avgExecuteTime /= vmNum;
-
-	    // 初始化LB值累加器
-	    double LB = 0;
-	    // 遍历所有虚拟机，计算每台虚拟机执行时间与平均执行时间的平方差，并累加到LB值累加器
+	    
+	    // 修复：正确计算所有VM的平均执行时间（原代码有误：avgExecuteTime += execTime; avgExecuteTime /= vmNum;）
+	    double totalTime = 0;
 	    for (int i = 0; i < vmNum; i++) {
-	        LB += Math.pow(executeTimeOfVM[i] - avgExecuteTime, 2);
+	        totalTime += executeTimeOfVM[i];
 	    }
-	    // 计算LB值，即每台虚拟机执行时间与平均执行时间的平方差的平均值的平方根
-	    LB = Math.sqrt(LB / vmNum);
+	    double avgExecuteTime = totalTime / vmNum;
 
-	    // 返回计算得到的LB值
-	    return LB;
+	    // 计算标准差（单目标函数使用标准差，不是变异系数）
+	    double variance = 0;
+	    for (int i = 0; i < vmNum; i++) {
+	        variance += Math.pow(executeTimeOfVM[i] - avgExecuteTime, 2);
+	    }
+	    double stdDev = Math.sqrt(variance / vmNum);
+
+	    // 返回标准差（单目标函数的原始实现）
+	    return stdDev;
+	}
+	
+	/**
+	 * 估算资源利用率（Resource Utilization）- 仅用于多目标优化
+	 * 衡量VM资源的利用效率：实际使用的MIPS / 总可用MIPS
+	 * 注意：此方法仅用于多目标优化，单目标优化不使用此方法
+	 * 
+	 * @param cloudletToVm 一个数组，表示每个云任务分配给的虚拟机ID
+	 * @return 返回资源利用率（0-1之间，1表示完全利用）
+	 */
+	public double estimateResourceUtilization(int[] cloudletToVm) {
+	    // 计算总可用MIPS
+	    double totalMips = 0;
+	    for (int i = 0; i < vmNum; i++) {
+	        totalMips += vmList.get(i).getMips();
+	    }
+	    
+	    // 计算每个VM的执行时间
+	    double[] executeTimeOfVM = new double[vmNum];
+	    double totalWorkload = 0;
+	    
+	    for (int i = 0; i < cloudletNum; i++) {
+	        long length = cloudletList.get(i).getCloudletLength();
+	        int vmId = cloudletToVm[i];
+	        double execTime = (double) length / vmList.get(vmId).getMips();
+	        executeTimeOfVM[vmId] += execTime;
+	        totalWorkload += length;
+	    }
+	    
+	    // 计算makespan
+	    double makespan = Arrays.stream(executeTimeOfVM).max().orElse(0.0);
+	    
+	    // 理想利用率 = 总任务工作量 / (总MIPS × makespan)
+	    double idealUtilization = (makespan > 0 && totalMips > 0) ? 
+	        totalWorkload / (totalMips * makespan) : 0.0;
+	    
+	    return idealUtilization;
+	}
+	
+	/**
+	 * 多目标优化专用的LoadBalance计算：使用变异系数（Coefficient of Variation）
+	 * 此方法仅用于多目标优化，单目标优化使用estimateLB（标准差）
+	 * 
+	 * @param cloudletToVm 一个数组，表示每个云任务分配给的虚拟机ID
+	 * @return 返回计算得到的LB值（变异系数）
+	 */
+	public double estimateLBForMO(int[] cloudletToVm) {
+	    // 初始化一个数组，用于存储每台虚拟机的执行时间
+	    double[] executeTimeOfVM = new double[vmNum];
+
+	    // 遍历所有云任务，计算每个任务的执行时间，并累加到相应虚拟机的执行时间中
+	    for (int i = 0; i < cloudletNum; i++) {
+	        // 获取当前云任务的长度
+	        long length = cloudletList.get(i).getCloudletLength();
+	        // 获取当前云任务分配的虚拟机ID
+	        int vmId = cloudletToVm[i];
+	        // 计算当前云任务在分配的虚拟机上的执行时间
+	        double execTime = (double) length / vmList.get(vmId).getMips();
+	        // 累加执行时间到对应虚拟机
+	        executeTimeOfVM[vmId] += execTime;
+	    }
+	    
+	    // 正确计算所有VM的平均执行时间
+	    double totalTime = 0;
+	    for (int i = 0; i < vmNum; i++) {
+	        totalTime += executeTimeOfVM[i];
+	    }
+	    double avgExecuteTime = totalTime / vmNum;
+
+	    // 计算标准差
+	    double variance = 0;
+	    for (int i = 0; i < vmNum; i++) {
+	        variance += Math.pow(executeTimeOfVM[i] - avgExecuteTime, 2);
+	    }
+	    double stdDev = Math.sqrt(variance / vmNum);
+
+	    // 使用变异系数（CV = 标准差 / 平均值），无量纲，便于比较
+	    return avgExecuteTime > 0 ? stdDev / avgExecuteTime : 0.0;
 	}
 
 	/**
