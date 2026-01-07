@@ -1,4 +1,4 @@
-package CloudletScheduler.MOOptimizer.mogwo;
+package CloudletScheduler.MOOptimizer.nsgaii;
 
 import CloudletScheduler.MOOptimizer.ParetoArchive;
 import CloudletScheduler.datacenter.ObjectiveValues;
@@ -13,21 +13,21 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Multi-Objective Grey Wolf Optimizer Scheduler (MO-GWO)
- * Integrates MO-GWO into CloudSim task scheduling.
+ * NSGA-II调度器
+ * 使用经典的非支配排序遗传算法进行多目标优化
  */
-public class MOGWOScheduler extends Scheduler {
+public class NSGAIIScheduler extends Scheduler {
 
     private static final int POPULATION = MainRunner.Config.POPULATION;
-    private static final int MAX_ITER = MainRunner.Config.MAX_ITER;
+    private static final int MAX_FES = MainRunner.Config.MAX_ITER * MainRunner.Config.POPULATION;
     private static final int ARCHIVE_SIZE = MainRunner.Config.ARCHIVE_SIZE;
     
-    private ParetoArchive paretoArchive; // 保存最终Pareto存档
-    private ParetoArchive firstGenerationArchive; // 保存第一代Pareto存档
+    private ParetoArchive paretoArchive;
+    private ParetoArchive firstGenerationArchive;
 
-    public MOGWOScheduler(List<Cloudlet> cloudletList, List<Vm> vmList) {
+    public NSGAIIScheduler(List<Cloudlet> cloudletList, List<Vm> vmList) {
         super(cloudletList, vmList);
-        Log.printLine("Using Multi-Objective Grey Wolf Optimizer (MO-GWO) scheduler");
+        Log.printLine("Using Non-dominated Sorting Genetic Algorithm II (NSGA-II) scheduler");
     }
     
     @Override
@@ -44,28 +44,28 @@ public class MOGWOScheduler extends Scheduler {
     public int[] allocate() {
         OptFunctionMulti evalFunc = (int[] assignment) -> {
             double makespan = estimateMakespan(assignment);
-            double costEfficiency = estimateCostEfficiencyForMO(assignment); // 成本效率比
-            double loadBalanceIndex = estimateLoadBalanceIndexForMO(assignment); // 负载均衡指数
-            double resourceWaste = estimateResourceWasteForMO(assignment); // 资源浪费率
+            double costEfficiency = estimateCostEfficiencyForMO(assignment);
+            double loadBalanceIndex = estimateLoadBalanceIndexForMO(assignment);
+            double resourceWaste = estimateResourceWasteForMO(assignment);
             return new ObjectiveValues(makespan, costEfficiency, loadBalanceIndex, resourceWaste);
         };
 
-        MOGreyWolfOptimizer optimizer = new MOGreyWolfOptimizer(
+        NSGAII optimizer = new NSGAII(
                 evalFunc,
                 POPULATION,
-                0,                      // lower bound: VM index starts at 0
-                vmNum - 1,              // upper bound: max VM index
-                cloudletNum,            // dimension = number of cloudlets
-                MAX_ITER,
+                0,
+                vmNum - 1,
+                cloudletNum,
+                MAX_FES,
                 ARCHIVE_SIZE
         );
 
         ParetoArchive archive = optimizer.execute();
-        this.paretoArchive = archive; // 保存最终Pareto存档
-        this.firstGenerationArchive = optimizer.getFirstGenerationArchive(); // 保存第一代Pareto存档
+        this.paretoArchive = archive;
+        this.firstGenerationArchive = optimizer.getFirstGenerationArchive();
 
-        if (archive.size() == 0) {
-            Log.printLine("⚠️ Warning: MO-GWO returned empty Pareto archive. Using random assignment.");
+        if (archive.isEmpty()) {
+            Log.printLine("⚠️ Warning: NSGA-II returned empty Pareto archive. Using random assignment.");
             return generateRandomAssignment();
         }
 
@@ -77,11 +77,11 @@ public class MOGWOScheduler extends Scheduler {
         int[] assignment = new int[cloudletNum];
         for (int i = 0; i < cloudletNum; i++) {
             int vmId = (int) Math.round(selectedSolution[i]);
-            vmId = Math.max(0, Math.min(vmId, vmNum - 1)); // clamp to [0, vmNum-1]
+            vmId = Math.max(0, Math.min(vmId, vmNum - 1));
             assignment[i] = vmId;
         }
 
-        Log.printLine("✅ MO-GWO found " + archive.size() + " non-dominated solutions. Selected one via leader selection.");
+        Log.printLine("✅ NSGA-II found " + archive.size() + " non-dominated solutions. Selected one via leader selection.");
         return assignment;
     }
 

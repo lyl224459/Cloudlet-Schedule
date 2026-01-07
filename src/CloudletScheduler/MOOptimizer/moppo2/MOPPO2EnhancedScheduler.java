@@ -48,11 +48,10 @@ public class MOPPO2EnhancedScheduler extends Scheduler {
         // 多目标优化函数：复用父类评估方法
         OptFunctionMulti evalFunc = (int[] assignment) -> {
             double makespan = estimateMakespan(assignment);
-            double cost = estimateCost(assignment);
-            double lb = estimateLBForMO(assignment); // 多目标优化使用变异系数
-            double resourceUtilization = estimateResourceUtilization(assignment);
-            double ruMinimized = 1.0 - resourceUtilization;
-            return new ObjectiveValues(makespan, cost, lb, ruMinimized);
+            double costEfficiency = estimateCostEfficiencyForMO(assignment); // 成本效率比
+            double loadBalanceIndex = estimateLoadBalanceIndexForMO(assignment); // 负载均衡指数
+            double resourceWaste = estimateResourceWasteForMO(assignment); // 资源浪费率
+            return new ObjectiveValues(makespan, costEfficiency, loadBalanceIndex, resourceWaste);
         };
 
         // 创建优化器
@@ -72,7 +71,7 @@ public class MOPPO2EnhancedScheduler extends Scheduler {
 
         // 回退：存档为空 → 随机分配
         if (archive.isEmpty()) {
-            Log.printLine("⚠️ MO-PPO2Enhanced produced empty archive. Using random assignment.");
+            Log.printLine("⚠️ Warning: MO-PPO2Enhanced returned empty Pareto archive. Using random assignment.");
             return generateRandomAssignment();
         }
 
@@ -89,7 +88,7 @@ public class MOPPO2EnhancedScheduler extends Scheduler {
             assignment[i] = Math.max(0, Math.min(vmId, vmNum - 1));
         }
 
-        Log.printLine("✅ MO-PPO2Enhanced returned " + archive.size() + " Pareto solutions. Leader chosen.");
+        Log.printLine("✅ MO-PPO2Enhanced found " + archive.size() + " non-dominated solutions. Selected one via leader selection.");
 
         return assignment;
     }

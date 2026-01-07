@@ -63,7 +63,7 @@ public class MOPPO3v2 {
         this.ub = ub;
         this.dim = dim;
         this.maxFEs = maxFEs;
-        this.numObjectives = 4; // makespan, cost, lb, resourceUtilization
+        this.numObjectives = 4; // makespan, costEfficiency, loadBalanceIndex, resourceWaste
 
         this.positions = new double[population][dim];
         this.flockMemoryX = new double[population][dim];

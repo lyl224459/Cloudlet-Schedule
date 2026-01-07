@@ -198,7 +198,7 @@ public class MOIWhaleOptimizationAlgorithm {
             // 先评估一个合法解以获取目标维度（或预设）
             // 更安全的方式：使用已知目标数量（例如 3）
             // 或者：通过临时评估一个合法解获取长度
-            int numObjectives = 4; // 👈 根据你的实际目标数设定（makespan, cost, lb, resourceUtilization）
+            int numObjectives = 4; // 👈 根据你的实际目标数设定（makespan, costEfficiency, loadBalanceIndex, resourceWaste）
 
             double[] penalties = new double[numObjectives];
             Arrays.fill(penalties, Double.MAX_VALUE / 10.0);

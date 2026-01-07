@@ -34,6 +34,7 @@ public class ParetoArchive {
 
         List<Integer> toRemove = new ArrayList<>();
         boolean isDominated = false;
+        boolean isDuplicate = false; // 检查是否为重复解（目标值完全相同）
 
         for (int i = 0; i < objectives.size(); i++) {
             int cmp = dominates(obj, objectives.get(i));
@@ -42,10 +43,24 @@ public class ParetoArchive {
             } else if (cmp == -1) {
                 isDominated = true;
                 break;
+            } else if (cmp == 0) {
+                // 检查目标值是否完全相同（重复解）
+                // 使用容差比较处理浮点数精度问题
+                boolean allEqual = true;
+                for (int j = 0; j < obj.getValues().length; j++) {
+                    if (Math.abs(obj.getValues()[j] - objectives.get(i).getValues()[j]) > 1e-10) {
+                        allEqual = false;
+                        break;
+                    }
+                }
+                if (allEqual) {
+                    isDuplicate = true;
+                    break; // 发现重复解，不添加
+                }
             }
         }
 
-        if (isDominated) return;
+        if (isDominated || isDuplicate) return;
 
         // 从后往前删除
         for (int i = toRemove.size() - 1; i >= 0; i--) {

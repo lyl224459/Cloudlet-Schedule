@@ -53,11 +53,10 @@ public class MOPPO3v2Scheduler extends Scheduler {
     public int[] allocate() {
         OptFunctionMulti evalFunc = (int[] assignment) -> {
             double makespan = estimateMakespan(assignment);
-            double cost = estimateCost(assignment);
-            double lb = estimateLBForMO(assignment); // 多目标优化使用变异系数
-            double resourceUtilization = estimateResourceUtilization(assignment);
-            double ruMinimized = 1.0 - resourceUtilization;
-            return new ObjectiveValues(makespan, cost, lb, ruMinimized);
+            double costEfficiency = estimateCostEfficiencyForMO(assignment); // 成本效率比
+            double loadBalanceIndex = estimateLoadBalanceIndexForMO(assignment); // 负载均衡指数
+            double resourceWaste = estimateResourceWasteForMO(assignment); // 资源浪费率
+            return new ObjectiveValues(makespan, costEfficiency, loadBalanceIndex, resourceWaste);
         };
 
         MOPPO3v2 optimizer = new MOPPO3v2(
@@ -74,7 +73,7 @@ public class MOPPO3v2Scheduler extends Scheduler {
         this.paretoArchive = archive; // 保存Pareto存档
 
         if (archive.isEmpty()) {
-            Log.printLine("⚠️ MO-PPO3v2 produced empty archive. Using random assignment.");
+            Log.printLine("⚠️ Warning: MO-PPO3v2 returned empty Pareto archive. Using random assignment.");
             return generateRandomAssignment();
         }
 
@@ -90,7 +89,7 @@ public class MOPPO3v2Scheduler extends Scheduler {
             assignment[i] = Math.max(0, Math.min(vmId, vmNum - 1));
         }
 
-        Log.printLine("✅ MO-PPO3v2 returned " + archive.size() + " Pareto solutions.");
+        Log.printLine("✅ MO-PPO3v2 found " + archive.size() + " non-dominated solutions. Selected one via leader selection.");
         return assignment;
     }
 
@@ -124,7 +123,7 @@ public class MOPPO3v2Scheduler extends Scheduler {
 
         // 理想点：各目标的最小值
         // 计算每个解到理想点的归一化欧氏距离
-        // 权重：makespan=0.3, cost=0.3, lb=0.25, resourceUtilization=0.15 (更均衡的权重)
+        // 权重：makespan=0.3, costEfficiency=0.3, loadBalanceIndex=0.25, resourceWaste=0.15 (更均衡的权重)
         double[] weights = {0.3, 0.3, 0.25, 0.15};
         
         int bestIdx = 0;

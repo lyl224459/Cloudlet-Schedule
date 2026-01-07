@@ -1,4 +1,4 @@
-package CloudletScheduler.MOOptimizer.moppo;
+package CloudletScheduler.MOOptimizer.moippo;
 
 import CloudletScheduler.MOOptimizer.ParetoArchive;
 import CloudletScheduler.datacenter.ObjectiveValues;
@@ -13,22 +13,33 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * 多目标掠食者-猎物优化算法调度器（MO-PPO）
- * 基于 Pareto 存档维护非支配解集，支持多目标云任务调度。
- * 直接复用父类 Scheduler 中的 estimateXXX 方法进行多目标评估。
+ * 多目标改进掠食者-猎物优化算法调度器（MO-IPPO）
+ * 
+ * 基于改进的MO-PPO算法，针对云计算任务调度的4个多目标函数进行优化：
+ * - Makespan（最大完成时间）
+ * - CostEfficiency（成本效率比）
+ * - LoadBalanceIndex（负载均衡指数）
+ * - ResourceWaste（资源浪费率）
+ * 
+ * 主要改进：
+ * 1. 改进的初始化策略（整数随机初始化 + 贪心初始化）
+ * 2. 目标函数感知的搜索策略
+ * 3. 多样性增强机制
+ * 4. 自适应参数调整
+ * 5. 局部搜索增强
  */
-public class MOPPOScheduler extends Scheduler {
+public class MOIPPOScheduler extends Scheduler {
 
     private static final int POPULATION = MainRunner.Config.POPULATION;
-    private static final int MAX_FES = MainRunner.Config.MAX_ITER * MainRunner.Config.POPULATION; // 转换为函数评估次数
+    private static final int MAX_FES = MainRunner.Config.MAX_ITER * MainRunner.Config.POPULATION;
     private static final int ARCHIVE_SIZE = MainRunner.Config.ARCHIVE_SIZE;
     
     private ParetoArchive paretoArchive; // 保存最终Pareto存档
     private ParetoArchive firstGenerationArchive; // 保存第一代Pareto存档
 
-    public MOPPOScheduler(List<Cloudlet> cloudletList, List<Vm> vmList) {
+    public MOIPPOScheduler(List<Cloudlet> cloudletList, List<Vm> vmList) {
         super(cloudletList, vmList);
-        Log.printLine("Using Multi-Objective Predatory Prey Optimization (MO-PPO) scheduler");
+        Log.printLine("Using Improved Multi-Objective Predatory Prey Optimization (MO-IPPO) scheduler");
     }
     
     @Override
@@ -38,7 +49,6 @@ public class MOPPOScheduler extends Scheduler {
     
     /**
      * 获取第一代Pareto存档
-     * @return 第一代Pareto存档
      */
     public ParetoArchive getFirstGenerationArchive() {
         return firstGenerationArchive;
@@ -55,8 +65,8 @@ public class MOPPOScheduler extends Scheduler {
             return new ObjectiveValues(makespan, costEfficiency, loadBalanceIndex, resourceWaste);
         };
 
-        // 创建 MO-PPO 优化器
-        MOPredatoryPreyOptimization optimizer = new MOPredatoryPreyOptimization(
+        // 创建 MO-IPPO 优化器
+        MOImprovedPPO optimizer = new MOImprovedPPO(
                 evalFunc,
                 POPULATION,
                 0,                      // 决策变量下界（VM 索引从 0 开始）
@@ -73,7 +83,7 @@ public class MOPPOScheduler extends Scheduler {
 
         // 若存档为空，回退到随机分配
         if (archive.isEmpty()) {
-            Log.printLine("⚠️ Warning: MO-PPO returned empty Pareto archive. Using random assignment.");
+            Log.printLine("⚠️ Warning: MO-IPPO returned empty Pareto archive. Using random assignment.");
             return generateRandomAssignment();
         }
 
@@ -92,7 +102,7 @@ public class MOPPOScheduler extends Scheduler {
             assignment[i] = vmId;
         }
 
-        Log.printLine("✅ MO-PPO found " + archive.size() + " non-dominated solutions. Selected one via leader selection.");
+        Log.printLine("✅ MO-IPPO found " + archive.size() + " non-dominated solutions. Selected one via leader selection.");
         return assignment;
     }
 

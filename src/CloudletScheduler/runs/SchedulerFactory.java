@@ -3,12 +3,16 @@ package CloudletScheduler.runs;
 import CloudletScheduler.MOOptimizer.modbo.MODBOScheduler;
 import CloudletScheduler.MOOptimizer.mogwo.MOGWOScheduler;
 import CloudletScheduler.MOOptimizer.mohho.MOHHOScheduler;
+import CloudletScheduler.MOOptimizer.moippo.MOIPPOScheduler;
 import CloudletScheduler.MOOptimizer.moppo.MOPPOScheduler;
 import CloudletScheduler.MOOptimizer.moppo2.MOPPO2EnhancedScheduler;
 import CloudletScheduler.MOOptimizer.moppo2.MOPPO2Scheduler;
 import CloudletScheduler.MOOptimizer.mosequoia.MOSequoiaScheduler;
 import CloudletScheduler.MOOptimizer.mosfoa.MOSFOAScheduler;
 import CloudletScheduler.MOOptimizer.mowoa.MOWOAScheduler;
+import CloudletScheduler.MOOptimizer.nsgaii.NSGAIIScheduler;
+import CloudletScheduler.MOOptimizer.moead.MOEADScheduler;
+import CloudletScheduler.MOOptimizer.spea2.SPEA2Scheduler;
 import CloudletScheduler.datacenter.Scheduler;
 
 import java.util.Arrays;
@@ -49,6 +53,7 @@ public class SchedulerFactory {
             new SchedulerFactory("MOPPO", MOPPOScheduler::new),
             new SchedulerFactory("MOPPO2", MOPPO2Scheduler::new),
             new SchedulerFactory("MOPPO2E", MOPPO2EnhancedScheduler::new),
+            new SchedulerFactory("MOIPPO", MOIPPOScheduler::new),
 
             new SchedulerFactory("MOWOA", MOWOAScheduler::new),
             new SchedulerFactory("MODBO", MODBOScheduler::new),
@@ -56,7 +61,12 @@ public class SchedulerFactory {
             new SchedulerFactory("MOGWO", MOGWOScheduler::new),
 
             new SchedulerFactory("MOSFOA", MOSFOAScheduler::new),
-            new SchedulerFactory("mosequoia", MOSequoiaScheduler::new)
+            new SchedulerFactory("mosequoia", MOSequoiaScheduler::new),
+
+            // 经典多目标优化算法
+            new SchedulerFactory("NSGAII", NSGAIIScheduler::new),
+            new SchedulerFactory("MOEAD", MOEADScheduler::new),
+            new SchedulerFactory("SPEA2", SPEA2Scheduler::new)
 
 //            new SchedulerFactory("maxmin",MaxMinScheduler::new),
 //            new SchedulerFactory("minmin",MinMinScheduler::new)

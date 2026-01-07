@@ -167,13 +167,147 @@ public abstract class Scheduler {
 	    return idealUtilization;
 	}
 	
+	// ========== 新的多目标优化专用方法（与单目标完全独立）==========
+	
+	/**
+	 * 多目标优化专用：计算Cost Efficiency（成本效率比）
+	 * 定义：总成本 / 总工作量（MI，Million Instructions）
+	 * 目标：最小化单位工作量的成本
+	 * 此方法仅用于多目标优化，与单目标的estimateCost完全独立
+	 * 
+	 * @param cloudletToVm 一个数组，表示每个云任务分配给的虚拟机ID
+	 * @return 返回成本效率比（单位：$/MI）
+	 */
+	public double estimateCostEfficiencyForMO(int[] cloudletToVm) {
+	    double totalCost = 0;
+	    long totalWorkload = 0;
+	    
+	    for (int i = 0; i < cloudletNum; i++) {
+	        long length = cloudletList.get(i).getCloudletLength();
+	        int vmId = cloudletToVm[i];
+	        double mips = vmList.get(vmId).getMips();
+	        double costPerSec = 0;
+
+	        if (mips == Constants.L_MIPS) {
+	            costPerSec = Constants.L_PRICE;
+	        } else if (mips == Constants.M_MIPS) {
+	            costPerSec = Constants.M_PRICE;
+	        } else if (mips == Constants.H_MIPS) {
+	            costPerSec = Constants.H_PRICE;
+	        }
+
+	        totalCost += (double) length / mips * costPerSec;
+	        totalWorkload += length;
+	    }
+	    
+	    // 成本效率比 = 总成本 / 总工作量（单位：$/MI）
+	    return totalWorkload > 0 ? totalCost / totalWorkload : Double.MAX_VALUE;
+	}
+	
+	/**
+	 * 多目标优化专用：计算Load Balance Index（负载均衡指数）
+	 * 定义：归一化的负载不均衡度，考虑VM性能差异
+	 * 目标：最小化负载不均衡度
+	 * 此方法仅用于多目标优化，与单目标的estimateLB完全独立
+	 * 
+	 * @param cloudletToVm 一个数组，表示每个云任务分配给的虚拟机ID
+	 * @return 返回负载均衡指数（变异系数）
+	 */
+	public double estimateLoadBalanceIndexForMO(int[] cloudletToVm) {
+	    // 计算每个VM的执行时间和MIPS
+	    double[] executeTimeOfVM = new double[vmNum];
+	    double[] mipsOfVM = new double[vmNum];
+	    
+	    for (int i = 0; i < cloudletNum; i++) {
+	        long length = cloudletList.get(i).getCloudletLength();
+	        int vmId = cloudletToVm[i];
+	        executeTimeOfVM[vmId] += (double) length / vmList.get(vmId).getMips();
+	        mipsOfVM[vmId] = vmList.get(vmId).getMips();
+	    }
+	    
+	    // 计算归一化负载（考虑VM性能差异）
+	    // 归一化负载 = 执行时间 / VM的MIPS（反映VM的利用率）
+	    double[] normalizedLoad = new double[vmNum];
+	    for (int i = 0; i < vmNum; i++) {
+	        normalizedLoad[i] = mipsOfVM[i] > 0 ? executeTimeOfVM[i] / mipsOfVM[i] : 0.0;
+	    }
+	    
+	    // 计算归一化负载的平均值
+	    double avgNormalizedLoad = Arrays.stream(normalizedLoad).average().orElse(0.0);
+	    
+	    if (avgNormalizedLoad <= 0) {
+	        return 0.0; // 完全均衡
+	    }
+	    
+	    // 计算标准差
+	    double variance = 0;
+	    for (int i = 0; i < vmNum; i++) {
+	        variance += Math.pow(normalizedLoad[i] - avgNormalizedLoad, 2);
+	    }
+	    double stdDev = Math.sqrt(variance / vmNum);
+	    
+	    // 使用变异系数（CV = 标准差 / 平均值）
+	    return stdDev / avgNormalizedLoad;
+	}
+	
+	/**
+	 * 多目标优化专用：计算Resource Waste（资源浪费率）
+	 * 定义：空闲资源比例 = 1 - 实际利用率
+	 * 目标：最小化资源浪费率
+	 * 此方法仅用于多目标优化，与单目标的estimateResourceUtilization完全独立
+	 * 
+	 * @param cloudletToVm 一个数组，表示每个云任务分配给的虚拟机ID
+	 * @return 返回资源浪费率（0-1之间，0表示完全利用，1表示完全不利用）
+	 */
+	public double estimateResourceWasteForMO(int[] cloudletToVm) {
+	    // 计算每个VM的执行时间和MIPS
+	    double[] executeTimeOfVM = new double[vmNum];
+	    double[] mipsOfVM = new double[vmNum];
+	    double totalMips = 0;
+	    
+	    for (int i = 0; i < vmNum; i++) {
+	        mipsOfVM[i] = vmList.get(i).getMips();
+	        totalMips += mipsOfVM[i];
+	    }
+	    
+	    for (int i = 0; i < cloudletNum; i++) {
+	        long length = cloudletList.get(i).getCloudletLength();
+	        int vmId = cloudletToVm[i];
+	        executeTimeOfVM[vmId] += (double) length / vmList.get(vmId).getMips();
+	    }
+	    
+	    // 计算makespan
+	    double makespan = Arrays.stream(executeTimeOfVM).max().orElse(0.0);
+	    
+	    if (makespan <= 0 || totalMips <= 0) {
+	        return 1.0; // 完全浪费
+	    }
+	    
+	    // 计算每个VM的利用率（执行时间 / makespan）
+	    double[] utilizationOfVM = new double[vmNum];
+	    for (int i = 0; i < vmNum; i++) {
+	        utilizationOfVM[i] = executeTimeOfVM[i] / makespan;
+	    }
+	    
+	    // 计算加权平均利用率（按MIPS加权）
+	    double weightedAvgUtilization = 0;
+	    for (int i = 0; i < vmNum; i++) {
+	        weightedAvgUtilization += utilizationOfVM[i] * (mipsOfVM[i] / totalMips);
+	    }
+	    
+	    // 资源浪费率 = 1 - 加权平均利用率
+	    return 1.0 - weightedAvgUtilization;
+	}
+	
 	/**
 	 * 多目标优化专用的LoadBalance计算：使用变异系数（Coefficient of Variation）
 	 * 此方法仅用于多目标优化，单目标优化使用estimateLB（标准差）
 	 * 
 	 * @param cloudletToVm 一个数组，表示每个云任务分配给的虚拟机ID
 	 * @return 返回计算得到的LB值（变异系数）
+	 * @deprecated 使用新的多目标函数设计，请使用estimateLoadBalanceIndexForMO
 	 */
+	@Deprecated
 	public double estimateLBForMO(int[] cloudletToVm) {
 	    // 初始化一个数组，用于存储每台虚拟机的执行时间
 	    double[] executeTimeOfVM = new double[vmNum];

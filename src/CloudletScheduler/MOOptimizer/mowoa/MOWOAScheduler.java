@@ -39,12 +39,10 @@ public class MOWOAScheduler extends Scheduler {
     public int[] allocate() {
         OptFunctionMulti evalFunc = (int[] assignment) -> {
             double makespan = estimateMakespan(assignment);
-//            double totalTime = estimateTotalTime(assignment);
-            double cost = estimateCost(assignment);
-            double lb = estimateLBForMO(assignment); // 多目标优化使用变异系数
-            double resourceUtilization = estimateResourceUtilization(assignment);
-            double ruMinimized = 1.0 - resourceUtilization;
-            return new ObjectiveValues(makespan, cost, lb, ruMinimized);
+            double costEfficiency = estimateCostEfficiencyForMO(assignment); // 成本效率比
+            double loadBalanceIndex = estimateLoadBalanceIndexForMO(assignment); // 负载均衡指数
+            double resourceWaste = estimateResourceWasteForMO(assignment); // 资源浪费率
+            return new ObjectiveValues(makespan, costEfficiency, loadBalanceIndex, resourceWaste);
         };
 
         MOWhaleOptimizationAlgorithm optimizer = new MOWhaleOptimizationAlgorithm(
@@ -62,7 +60,7 @@ public class MOWOAScheduler extends Scheduler {
         this.firstGenerationArchive = optimizer.getFirstGenerationArchive(); // 保存第一代Pareto存档
 
         if (archive.isEmpty()) {
-            Log.printLine("⚠️ MO-WOA returned empty archive. Using random assignment.");
+            Log.printLine("⚠️ Warning: MO-WOA returned empty Pareto archive. Using random assignment.");
             return generateRandomAssignment();
         }
 
@@ -76,7 +74,7 @@ public class MOWOAScheduler extends Scheduler {
             assignment[i] = Math.max(0, Math.min(vmNum - 1, (int) Math.round(selected[i])));
         }
 
-        Log.printLine("✅ MO-WOA found " + archive.size() + " non-dominated solutions.");
+        Log.printLine("✅ MO-WOA found " + archive.size() + " non-dominated solutions. Selected one via leader selection.");
         return assignment;
     }
 

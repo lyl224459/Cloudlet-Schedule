@@ -53,11 +53,10 @@ public class MOPPO3Scheduler extends Scheduler {
     public int[] allocate() {
         OptFunctionMulti evalFunc = (int[] assignment) -> {
             double makespan = estimateMakespan(assignment);
-            double cost = estimateCost(assignment);
-            double lb = estimateLBForMO(assignment); // 多目标优化使用变异系数
-            double resourceUtilization = estimateResourceUtilization(assignment);
-            double ruMinimized = 1.0 - resourceUtilization;
-            return new ObjectiveValues(makespan, cost, lb, ruMinimized);
+            double costEfficiency = estimateCostEfficiencyForMO(assignment); // 成本效率比
+            double loadBalanceIndex = estimateLoadBalanceIndexForMO(assignment); // 负载均衡指数
+            double resourceWaste = estimateResourceWasteForMO(assignment); // 资源浪费率
+            return new ObjectiveValues(makespan, costEfficiency, loadBalanceIndex, resourceWaste);
         };
 
         MOPPO3 optimizer = new MOPPO3(
@@ -74,7 +73,7 @@ public class MOPPO3Scheduler extends Scheduler {
         this.paretoArchive = archive; // 保存Pareto存档
 
         if (archive.isEmpty()) {
-            Log.printLine("⚠️ MO-PPO3 produced empty archive. Using random assignment.");
+            Log.printLine("⚠️ Warning: MO-PPO3 returned empty Pareto archive. Using random assignment.");
             return generateRandomAssignment();
         }
 
@@ -90,7 +89,7 @@ public class MOPPO3Scheduler extends Scheduler {
             assignment[i] = Math.max(0, Math.min(vmId, vmNum - 1));
         }
 
-        Log.printLine("✅ MO-PPO3 returned " + archive.size() + " Pareto solutions. Best solution chosen.");
+        Log.printLine("✅ MO-PPO3 found " + archive.size() + " non-dominated solutions. Best solution chosen.");
         return assignment;
     }
 
@@ -122,7 +121,7 @@ public class MOPPO3Scheduler extends Scheduler {
         }
 
         // 归一化并计算加权和 (makespan权重更高)
-        double[] weights = {0.4, 0.25, 0.2, 0.15}; // makespan, cost, lb, resourceUtilization
+        double[] weights = {0.4, 0.25, 0.2, 0.15}; // makespan, costEfficiency, loadBalanceIndex, resourceWaste
         int bestIdx = 0;
         double bestScore = Double.MAX_VALUE;
         

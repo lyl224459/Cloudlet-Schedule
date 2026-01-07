@@ -43,15 +43,13 @@ public class MODBOScheduler extends Scheduler {
 
     @Override
     public int[] allocate() {
-        // 构建多目标评估函数
+        // 构建多目标评估函数（使用新的独立目标函数设计）
         OptFunctionMulti evalFunc = (int[] assignment) -> {
             double makespan = estimateMakespan(assignment);
-//            double totalTime = estimateTotalTime(assignment);
-            double cost = estimateCost(assignment);
-            double lb = estimateLBForMO(assignment); // 多目标优化使用变异系数
-            double resourceUtilization = estimateResourceUtilization(assignment);
-            double ruMinimized = 1.0 - resourceUtilization;
-            return new ObjectiveValues(makespan, cost, lb, ruMinimized);
+            double costEfficiency = estimateCostEfficiencyForMO(assignment); // 成本效率比
+            double loadBalanceIndex = estimateLoadBalanceIndexForMO(assignment); // 负载均衡指数
+            double resourceWaste = estimateResourceWasteForMO(assignment); // 资源浪费率
+            return new ObjectiveValues(makespan, costEfficiency, loadBalanceIndex, resourceWaste);
         };
 
         // 初始化 MO-DBO 优化器
